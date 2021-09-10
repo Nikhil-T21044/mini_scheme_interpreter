@@ -1,0 +1,3 @@
+*.class
+visitor/*.class
+syntaxtree/*.class
