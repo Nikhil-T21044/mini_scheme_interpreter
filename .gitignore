@@ -1,3 +1,4 @@
 *.class
 visitor/*.class
 syntaxtree/*.class
+/bin/

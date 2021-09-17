@@ -1,0 +1,17 @@
+    (define foo (lambda (x) 
+    			 (lambda (y) 
+    			         (+ x y))))
+    (define proc (foo 1))
+	(define h (lambda (x y)
+				(x y)) )
+	(proc 10 )
+	(h proc (+ 1 10))
+	    (proc 10)	
+(set! b 10)
+
+(define a 10)
+a
+(define z (lambda (x y) (+ x y)))
+
+(z z 2)
+
