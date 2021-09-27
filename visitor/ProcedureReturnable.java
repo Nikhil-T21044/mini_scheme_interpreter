@@ -6,14 +6,14 @@ public class ProcedureReturnable implements Returnable {
 	private static final ReturnableType type = ReturnableType.LAMBDA;
 //	ProcedureExp value;
 	private Environment scope;
-	String name = "Anonymous";
+	String name = "";
 	String[] arguments;
 	Expression body;
 	ProcedureReturnable(Environment scope){
 		this.scope = scope;
 	}
 	public String print() {
-		return "<procedure: lambda ("+String.join( " ", this.arguments )+")>\n" ;
+		return "<procedure: lambda ("+String.join( " ", this.arguments )+")>" ;
 	};
 	public ReturnableType type() {
 		return type;

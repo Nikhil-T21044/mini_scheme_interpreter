@@ -9,6 +9,7 @@ public class Environment {
 	private HashMap<String, Returnable> table; // to store its symbol table
 	
 	public Environment(){
+		
 		table = new HashMap<String, Returnable>();
 	}
 	

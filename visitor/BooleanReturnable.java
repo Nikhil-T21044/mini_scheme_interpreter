@@ -7,7 +7,12 @@ public class BooleanReturnable implements Returnable {
 		this.value = value;
 	}
 	public String print() {
-		return String.valueOf(value);
+		if(value) {
+			return "#t";
+		}else {
+			return "#f";
+		}
+//		return String.valueOf(value);
 	};
 	public ReturnableType type() {
 		return type;

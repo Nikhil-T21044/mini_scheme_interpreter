@@ -69,8 +69,11 @@ public class GJDepthFirst implements GJVisitor<Returnable,Environment> {
       Returnable _ret=null;
       for(Node node : n.f0.nodes) {
     	  Returnable result = node.accept(this, argu);
-    	  System.out.format(result.type().toString());
-    	  System.out.format(result.print());
+//    	  System.out.format(result.type().toString());
+    	  String output = result.print();
+    	  if( !output.equals("") ) System.out.println(result.print());
+    	  if(result.type() == ReturnableType.ERR) // comment this if want to continue processing after encountering err
+    		  return _ret;
       }
 //      n.f0.accept(this, argu);
       n.f1.accept(this, argu);
@@ -150,6 +153,8 @@ public class GJDepthFirst implements GJVisitor<Returnable,Environment> {
       n.f1.accept(this, argu);
       for(Node node: n.f2.nodes) {
     	  _ret = node.accept(this, argu);   // returning last evaluated
+    	  if(_ret.type() == ReturnableType.ERR)
+    		  return _ret; // break out of evaluating begin block with err
       }
       n.f3.accept(this, argu);
       return _ret;
@@ -177,12 +182,11 @@ public class GJDepthFirst implements GJVisitor<Returnable,Environment> {
       n.f4.accept(this, argu);
       
       if(istypeIntegrerCompatible(result1, result2)){
-		   if( ((IntegerReturnable)result1).value == ((IntegerReturnable)result2).value) {
 			    int result = ((IntegerReturnable)result1).value + ((IntegerReturnable)result2).value;
 			    _ret = new IntegerReturnable(result);
-		   }
 	   }else {
 		   //TODO send Err
+		   return new ErrReturnable("Expected number(s) but given " + result1.print() + " , "+result2.print());
 	   }
       
 //      int result = ((IntegerReturnable)result1).value + ((IntegerReturnable)result2).value;
@@ -211,12 +215,11 @@ public class GJDepthFirst implements GJVisitor<Returnable,Environment> {
       }
       n.f4.accept(this, argu);
       if(istypeIntegrerCompatible(result1, result2)){
-		   if( ((IntegerReturnable)result1).value == ((IntegerReturnable)result2).value) {
-			    int result = ((IntegerReturnable)result1).value - ((IntegerReturnable)result2).value;
-			    _ret = new IntegerReturnable(result);
-		   }
+    	  int result = ((IntegerReturnable)result1).value - ((IntegerReturnable)result2).value;
+    	  _ret = new IntegerReturnable(result);
 	   }else {
 		   //TODO send Err
+		   return new ErrReturnable("Expected number(s) but given " + result1.print() + " , "+result2.print());
 	   }
 //      int result = ((IntegerReturnable)result1).value - ((IntegerReturnable)result2).value;
 //      return new IntegerReturnable(result);
@@ -244,12 +247,11 @@ public class GJDepthFirst implements GJVisitor<Returnable,Environment> {
       }
       n.f4.accept(this, argu);
       if(istypeIntegrerCompatible(result1, result2)){
-		   if( ((IntegerReturnable)result1).value == ((IntegerReturnable)result2).value) {
 			    int result = ((IntegerReturnable)result1).value * ((IntegerReturnable)result2).value;
 			    _ret = new IntegerReturnable(result);
-		   }
 	   }else {
 		   //TODO send Err
+		   return new ErrReturnable("Expected number(s) but given " + result1.print() + " , "+result2.print());
 	   }
       
 //      int result = ((IntegerReturnable)result1).value * ((IntegerReturnable)result2).value;
@@ -278,12 +280,11 @@ public class GJDepthFirst implements GJVisitor<Returnable,Environment> {
       }
       n.f4.accept(this, argu);
       if(istypeIntegrerCompatible(result1, result2)){
-		   if( ((IntegerReturnable)result1).value == ((IntegerReturnable)result2).value) {
 			    int result = ((IntegerReturnable)result1).value / ((IntegerReturnable)result2).value;
 			    _ret = new IntegerReturnable(result);
-		   }
 	   }else {
 		   //TODO send Err
+		   return new ErrReturnable("Expected number(s) but given " + result1.print() + " , "+result2.print());
 	   }
 //      int result = ((IntegerReturnable)result1).value / ((IntegerReturnable)result2).value;
 //      return new IntegerReturnable(result);
@@ -314,6 +315,7 @@ public class GJDepthFirst implements GJVisitor<Returnable,Environment> {
 		   if( ((IntegerReturnable)result1).value > ((IntegerReturnable)result2).value)   _ret.value = true;
 	   }else {
 		   //TODO send Err
+		   return new ErrReturnable("Expected number(s) but given " + result1.print() + " , "+result2.print());
 	   }
 //	   if(result1.type() != result2.type()) {
 //	    // TODO check this
@@ -368,6 +370,7 @@ public class GJDepthFirst implements GJVisitor<Returnable,Environment> {
 		   if( ((IntegerReturnable)result1).value < ((IntegerReturnable)result2).value)   _ret.value = true;
 	   }else {
 		   //TODO send Err
+		   return new ErrReturnable("Expected number(s) but given " + result1.print() + " , "+result2.print());
 	   }
       
 //      if(result1.type() != result2.type()) {
@@ -403,6 +406,7 @@ public class GJDepthFirst implements GJVisitor<Returnable,Environment> {
 		   if( ((IntegerReturnable)result1).value == ((IntegerReturnable)result2).value)   _ret.value = true;
 	   }else {
 		   //TODO send Err
+		   return new ErrReturnable("Expected number(s) but given " + result1.print() + " , "+result2.print());
 	   }
       
 //      if(result1.type() != result2.type()) {
@@ -556,9 +560,15 @@ public class GJDepthFirst implements GJVisitor<Returnable,Environment> {
       ProcedureReturnable procedure_definition =  (ProcedureReturnable)result;
       
       if(arg_len < procedure_definition.arguments.length) {
-    	  return new ErrReturnable("Number of supplied arguments to procedure '"+ procedure_definition.name +"' is less than expected.");//TODO add procedure name
+    	  String procedureName = procedure_definition.name;
+    	  if(procedureName.length() > 1)
+    		  procedureName = " '"+procedureName+"'";
+    	  return new ErrReturnable("Number of supplied arguments to procedure"+ procedureName +" is less than expected.");
       }else if(arg_len > procedure_definition.arguments.length) {
-    	  return new ErrReturnable("Number of supplied arguments to procedure '"+ procedure_definition.name +"' is greater than expected.");//TODO add procedure name
+    	  String procedureName = procedure_definition.name;
+    	  if(procedureName.length() > 1)
+    		  procedureName = " '"+procedureName+"'";
+    	  return new ErrReturnable("Number of supplied arguments to procedure"+ procedureName +" is greater than expected.");
       }
       
       // lexical scoping  

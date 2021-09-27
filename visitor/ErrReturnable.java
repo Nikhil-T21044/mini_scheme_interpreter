@@ -10,7 +10,7 @@ public class ErrReturnable implements Returnable {
 
 	@Override
 	public String print() {
-		return value + "\n";
+		return value;
 	}
 	
 	ErrReturnable(String value){

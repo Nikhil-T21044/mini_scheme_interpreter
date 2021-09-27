@@ -8,7 +8,7 @@ public class IntegerReturnable implements Returnable {
 	}
 	
 	public String print() {
-		return String.valueOf(value) + "\n";// + type;
+		return String.valueOf(value);// + type;
 	};
 	public ReturnableType type() {
 		return type;
