@@ -10,12 +10,12 @@ import java.util.*;
  * Provides default methods which visit each node in the tree in depth-first
  * order.  Your visitors may extend this class.
  */
-public class GJDepthFirst<R,A> implements GJVisitor<R,A> {
+public class GJDepthFirst implements GJVisitor<Returnable,Environment> {
    //
    // Auto class visitors--probably don't need to be overridden.
    //
-   public R visit(NodeList n, A argu) {
-      R _ret=null;
+   public Returnable visit(NodeList n, Environment argu) {
+      Returnable _ret=null;
       int _count=0;
       for ( Enumeration<Node> e = n.elements(); e.hasMoreElements(); ) {
          e.nextElement().accept(this,argu);
@@ -24,9 +24,9 @@ public class GJDepthFirst<R,A> implements GJVisitor<R,A> {
       return _ret;
    }
 
-   public R visit(NodeListOptional n, A argu) {
+   public Returnable visit(NodeListOptional n, Environment argu) {
       if ( n.present() ) {
-         R _ret=null;
+         Returnable _ret=null;
          int _count=0;
          for ( Enumeration<Node> e = n.elements(); e.hasMoreElements(); ) {
             e.nextElement().accept(this,argu);
@@ -38,15 +38,15 @@ public class GJDepthFirst<R,A> implements GJVisitor<R,A> {
          return null;
    }
 
-   public R visit(NodeOptional n, A argu) {
+   public Returnable visit(NodeOptional n, Environment argu) {
       if ( n.present() )
          return n.node.accept(this,argu);
       else
          return null;
    }
 
-   public R visit(NodeSequence n, A argu) {
-      R _ret=null;
+   public Returnable visit(NodeSequence n, Environment argu) {
+      Returnable _ret=null;
       int _count=0;
       for ( Enumeration<Node> e = n.elements(); e.hasMoreElements(); ) {
          e.nextElement().accept(this,argu);
@@ -55,7 +55,7 @@ public class GJDepthFirst<R,A> implements GJVisitor<R,A> {
       return _ret;
    }
 
-   public R visit(NodeToken n, A argu) { return null; }
+   public Returnable visit(NodeToken n, Environment argu) { return null; }
 
    //
    // User-generated visitor methods below
@@ -65,9 +65,17 @@ public class GJDepthFirst<R,A> implements GJVisitor<R,A> {
     * f0 -> ( Line() )*
     * f1 -> <EOF>
     */
-   public R visit(Goal n, A argu) {
-      R _ret=null;
-      n.f0.accept(this, argu);
+   public Returnable visit(Goal n, Environment argu) {
+      Returnable _ret=null;
+      for(Node node : n.f0.nodes) {
+    	  Returnable result = node.accept(this, argu);
+//    	  System.out.format(result.type().toString());
+    	  String output = result.print();
+    	  if( !output.equals("") ) System.out.println(result.print());
+    	  if(result.type() == ReturnableType.ERR) // comment this if want to continue processing after encountering err
+    		  return _ret;
+      }
+//      n.f0.accept(this, argu);
       n.f1.accept(this, argu);
       return _ret;
    }
@@ -75,9 +83,9 @@ public class GJDepthFirst<R,A> implements GJVisitor<R,A> {
    /**
     * f0 -> Expression()
     */
-   public R visit(Line n, A argu) {
-      R _ret=null;
-      n.f0.accept(this, argu);
+   public Returnable visit(Line n, Environment argu) {
+      Returnable _ret=null;
+      _ret = n.f0.accept(this, argu);
       return _ret;
    }
 
@@ -100,17 +108,17 @@ public class GJDepthFirst<R,A> implements GJVisitor<R,A> {
     *       | ProcedureExp()
     *       | Application()
     */
-   public R visit(Expression n, A argu) {
-      R _ret=null;
-      n.f0.accept(this, argu);
+   public Returnable visit(Expression n, Environment argu) {
+      Returnable _ret=null;
+      _ret = n.f0.accept(this, argu);
       return _ret;
    }
 
    /**
     * f0 -> <INTEGER_LITERAL>
     */
-   public R visit(IntegerLiteral n, A argu) {
-      R _ret=null;
+   public Returnable visit(IntegerLiteral n, Environment argu) {
+      IntegerReturnable _ret= new IntegerReturnable(Integer.parseInt(n.f0.tokenImage));
       n.f0.accept(this, argu);
       return _ret;
    }
@@ -118,8 +126,8 @@ public class GJDepthFirst<R,A> implements GJVisitor<R,A> {
    /**
     * f0 -> "#t"
     */
-   public R visit(TrueLiteral n, A argu) {
-      R _ret=null;
+   public Returnable visit(TrueLiteral n, Environment argu) {
+      Returnable _ret=new BooleanReturnable(true);
       n.f0.accept(this, argu);
       return _ret;
    }
@@ -127,8 +135,8 @@ public class GJDepthFirst<R,A> implements GJVisitor<R,A> {
    /**
     * f0 -> "#f"
     */
-   public R visit(FalseLiteral n, A argu) {
-      R _ret=null;
+   public Returnable visit(FalseLiteral n, Environment argu) {
+      Returnable _ret= new BooleanReturnable(false);
       n.f0.accept(this, argu);
       return _ret;
    }
@@ -139,11 +147,15 @@ public class GJDepthFirst<R,A> implements GJVisitor<R,A> {
     * f2 -> ( Expression() )*
     * f3 -> ")"
     */
-   public R visit(BeginExpression n, A argu) {
-      R _ret=null;
+   public Returnable visit(BeginExpression n, Environment argu) {
+      Returnable _ret=null;
       n.f0.accept(this, argu);
       n.f1.accept(this, argu);
-      n.f2.accept(this, argu);
+      for(Node node: n.f2.nodes) {
+    	  _ret = node.accept(this, argu);   // returning last evaluated
+    	  if(_ret.type() == ReturnableType.ERR)
+    		  return _ret; // break out of evaluating begin block with err
+      }
       n.f3.accept(this, argu);
       return _ret;
    }
@@ -155,13 +167,30 @@ public class GJDepthFirst<R,A> implements GJVisitor<R,A> {
     * f3 -> Expression()
     * f4 -> ")"
     */
-   public R visit(PlusExpression n, A argu) {
-      R _ret=null;
+   public Returnable visit(PlusExpression n, Environment argu) {
+      Returnable _ret=null;
       n.f0.accept(this, argu);
       n.f1.accept(this, argu);
-      n.f2.accept(this, argu);
-      n.f3.accept(this, argu);
+      Returnable result1 = n.f2.accept(this, argu);
+      if(result1.type() == ReturnableType.ERR) {
+    	  return result1;
+      }
+      Returnable result2 = n.f3.accept(this, argu);
+      if(result2.type() == ReturnableType.ERR) {
+    	  return result2;
+      }
       n.f4.accept(this, argu);
+      
+      if(istypeIntegrerCompatible(result1, result2)){
+			    int result = ((IntegerReturnable)result1).value + ((IntegerReturnable)result2).value;
+			    _ret = new IntegerReturnable(result);
+	   }else {
+		   //TODO send Err
+		   return new ErrReturnable("Expected number(s) but given " + result1.print() + " , "+result2.print());
+	   }
+      
+//      int result = ((IntegerReturnable)result1).value + ((IntegerReturnable)result2).value;
+//      return new IntegerReturnable(result);
       return _ret;
    }
 
@@ -172,13 +201,28 @@ public class GJDepthFirst<R,A> implements GJVisitor<R,A> {
     * f3 -> Expression()
     * f4 -> ")"
     */
-   public R visit(MinusExpression n, A argu) {
-      R _ret=null;
+   public Returnable visit(MinusExpression n, Environment argu) {
+      Returnable _ret=null;
       n.f0.accept(this, argu);
       n.f1.accept(this, argu);
-      n.f2.accept(this, argu);
-      n.f3.accept(this, argu);
+      Returnable result1 = n.f2.accept(this, argu);
+      if(result1.type() == ReturnableType.ERR) {
+    	  return result1;
+      }
+      Returnable result2 = n.f3.accept(this, argu);
+      if(result2.type() == ReturnableType.ERR) {
+    	  return result2;
+      }
       n.f4.accept(this, argu);
+      if(istypeIntegrerCompatible(result1, result2)){
+    	  int result = ((IntegerReturnable)result1).value - ((IntegerReturnable)result2).value;
+    	  _ret = new IntegerReturnable(result);
+	   }else {
+		   //TODO send Err
+		   return new ErrReturnable("Expected number(s) but given " + result1.print() + " , "+result2.print());
+	   }
+//      int result = ((IntegerReturnable)result1).value - ((IntegerReturnable)result2).value;
+//      return new IntegerReturnable(result);
       return _ret;
    }
 
@@ -189,13 +233,29 @@ public class GJDepthFirst<R,A> implements GJVisitor<R,A> {
     * f3 -> Expression()
     * f4 -> ")"
     */
-   public R visit(MultiplyExpression n, A argu) {
-      R _ret=null;
+   public Returnable visit(MultiplyExpression n, Environment argu) {
+      Returnable _ret=null;
       n.f0.accept(this, argu);
       n.f1.accept(this, argu);
-      n.f2.accept(this, argu);
-      n.f3.accept(this, argu);
+      Returnable result1 = n.f2.accept(this, argu);
+      if(result1.type() == ReturnableType.ERR) {
+    	  return result1;
+      }
+      Returnable result2 = n.f3.accept(this, argu);
+      if(result2.type() == ReturnableType.ERR) {
+    	  return result2;
+      }
       n.f4.accept(this, argu);
+      if(istypeIntegrerCompatible(result1, result2)){
+			    int result = ((IntegerReturnable)result1).value * ((IntegerReturnable)result2).value;
+			    _ret = new IntegerReturnable(result);
+	   }else {
+		   //TODO send Err
+		   return new ErrReturnable("Expected number(s) but given " + result1.print() + " , "+result2.print());
+	   }
+      
+//      int result = ((IntegerReturnable)result1).value * ((IntegerReturnable)result2).value;
+//      return new IntegerReturnable(result);
       return _ret;
    }
 
@@ -206,13 +266,28 @@ public class GJDepthFirst<R,A> implements GJVisitor<R,A> {
     * f3 -> Expression()
     * f4 -> ")"
     */
-   public R visit(DivideExpression n, A argu) {
-      R _ret=null;
+   public Returnable visit(DivideExpression n, Environment argu) {
+      Returnable _ret=null;
       n.f0.accept(this, argu);
       n.f1.accept(this, argu);
-      n.f2.accept(this, argu);
-      n.f3.accept(this, argu);
+      Returnable result1 = n.f2.accept(this, argu);
+      if(result1.type() == ReturnableType.ERR) {
+    	  return result1;
+      }
+      Returnable result2 = n.f3.accept(this, argu);
+      if(result2.type() == ReturnableType.ERR) {
+    	  return result2;
+      }
       n.f4.accept(this, argu);
+      if(istypeIntegrerCompatible(result1, result2)){
+			    int result = ((IntegerReturnable)result1).value / ((IntegerReturnable)result2).value;
+			    _ret = new IntegerReturnable(result);
+	   }else {
+		   //TODO send Err
+		   return new ErrReturnable("Expected number(s) but given " + result1.print() + " , "+result2.print());
+	   }
+//      int result = ((IntegerReturnable)result1).value / ((IntegerReturnable)result2).value;
+//      return new IntegerReturnable(result);
       return _ret;
    }
 
@@ -223,14 +298,51 @@ public class GJDepthFirst<R,A> implements GJVisitor<R,A> {
     * f3 -> Expression()
     * f4 -> ")"
     */
-   public R visit(GTExpression n, A argu) {
-      R _ret=null;
-      n.f0.accept(this, argu);
-      n.f1.accept(this, argu);
-      n.f2.accept(this, argu);
-      n.f3.accept(this, argu);
-      n.f4.accept(this, argu);
+   public Returnable visit(GTExpression n, Environment argu) {
+	   BooleanReturnable _ret=new BooleanReturnable(false);
+	   n.f0.accept(this, argu);
+	   n.f1.accept(this, argu);
+	   Returnable result1 = n.f2.accept(this, argu);
+	   if(result1.type() == ReturnableType.ERR) {
+		   return result1;
+	   }
+	   Returnable result2 = n.f3.accept(this, argu);
+	   if(result2.type() == ReturnableType.ERR) {
+		   return result2;	
+	   }
+	   n.f4.accept(this, argu);
+	   if(istypeIntegrerCompatible(result1, result2)){
+		   if( ((IntegerReturnable)result1).value > ((IntegerReturnable)result2).value)   _ret.value = true;
+	   }else {
+		   //TODO send Err
+		   return new ErrReturnable("Expected number(s) but given " + result1.print() + " , "+result2.print());
+	   }
+//	   if(result1.type() != result2.type()) {
+//	    // TODO check this
+//	   }else if( ((IntegerReturnable)result1).value > ((IntegerReturnable)result2).value) {
+//	   	  _ret.value = true;
+//	   }
       return _ret;
+   }
+   
+   public boolean isIntegerType(Returnable val) {
+	   if(val.type() == ReturnableType.INT )
+		   return true;
+	   return false;
+   }
+   
+   public boolean istypeCompatible(Returnable val1, Returnable val2) {
+	   if(val1.type() == val2.type()) {
+		   return true;	
+	   }
+	   return false;
+   }
+   
+   public boolean istypeIntegrerCompatible(Returnable val1, Returnable val2) {
+	   if(istypeCompatible(val1, val2) && isIntegerType(val1)){
+		   return true;	
+	   }
+	   return false;
    }
 
    /**
@@ -240,13 +352,32 @@ public class GJDepthFirst<R,A> implements GJVisitor<R,A> {
     * f3 -> Expression()
     * f4 -> ")"
     */
-   public R visit(LTExpression n, A argu) {
-      R _ret=null;
+   public Returnable visit(LTExpression n, Environment argu) {
+	  BooleanReturnable _ret=new BooleanReturnable(false);
       n.f0.accept(this, argu);
       n.f1.accept(this, argu);
-      n.f2.accept(this, argu);
-      n.f3.accept(this, argu);
+      Returnable result1 = n.f2.accept(this, argu);
+      if(result1.type() == ReturnableType.ERR) {
+    	  return result1;	// stop processing with err TODO check expression for possible err also
+      }
+      Returnable result2 = n.f3.accept(this, argu);
+      if(result2.type() == ReturnableType.ERR) {
+    	  return result2;	// stop processing with err TODO check expression for possible err also
+      }
       n.f4.accept(this, argu);
+      
+      if(istypeIntegrerCompatible(result1, result2)){
+		   if( ((IntegerReturnable)result1).value < ((IntegerReturnable)result2).value)   _ret.value = true;
+	   }else {
+		   //TODO send Err
+		   return new ErrReturnable("Expected number(s) but given " + result1.print() + " , "+result2.print());
+	   }
+      
+//      if(result1.type() != result2.type()) {
+//    	  // TODO check this
+//      }else if( ((IntegerReturnable)result1).value < ((IntegerReturnable)result2).value) {
+//    	  _ret.value = true;
+//      }
       return _ret;
    }
 
@@ -257,13 +388,33 @@ public class GJDepthFirst<R,A> implements GJVisitor<R,A> {
     * f3 -> Expression()
     * f4 -> ")"
     */
-   public R visit(EQExpression n, A argu) {
-      R _ret=null;
+   public Returnable visit(EQExpression n, Environment argu) {
+	  BooleanReturnable _ret= new BooleanReturnable(false);
       n.f0.accept(this, argu);
       n.f1.accept(this, argu);
-      n.f2.accept(this, argu);
-      n.f3.accept(this, argu);
+      Returnable result1 = n.f2.accept(this, argu);
+      if(result1.type() == ReturnableType.ERR) {
+    	  return result1;	// stop processing with err TODO check expression for possible err also
+      }
+      Returnable result2 = n.f3.accept(this, argu);
+      if(result2.type() == ReturnableType.ERR) {
+    	  return result2;	// stop processing with err TODO check expression for possible err also
+      }
       n.f4.accept(this, argu);
+      
+      if(istypeIntegrerCompatible(result1, result2)){
+		   if( ((IntegerReturnable)result1).value == ((IntegerReturnable)result2).value)   _ret.value = true;
+	   }else {
+		   //TODO send Err
+		   return new ErrReturnable("Expected number(s) but given " + result1.print() + " , "+result2.print());
+	   }
+      
+//      if(result1.type() != result2.type()) {
+//    	  // TODO check this
+//      }
+//      else if( ((IntegerReturnable)result1).value == ((IntegerReturnable)result2).value) {
+//    	  _ret.value = true;
+//      }
       return _ret;
    }
 
@@ -275,13 +426,22 @@ public class GJDepthFirst<R,A> implements GJVisitor<R,A> {
     * f4 -> Expression()
     * f5 -> ")"
     */
-   public R visit(IfExpression n, A argu) {
-      R _ret=null;
+   public Returnable visit(IfExpression n, Environment argu) {
+      Returnable _ret=null;
       n.f0.accept(this, argu);
       n.f1.accept(this, argu);
-      n.f2.accept(this, argu);
-      n.f3.accept(this, argu);
-      n.f4.accept(this, argu);
+      Returnable result = n.f2.accept(this, argu);
+      if(result.type() == ReturnableType.ERR) {
+    	  return result;	// stop processing with err TODO check expression for possible err also
+      }
+      if(result.type() != ReturnableType.BOOLEAN)
+    	  return new ErrReturnable("Expected boolean value but given "+ result.print() ); //TODO check the err string
+      
+      if( ((BooleanReturnable) result).value ) {	// evaluting if else
+    	_ret = n.f3.accept(this, argu);
+      }else {
+    	_ret = n.f4.accept(this, argu); 
+      }
       n.f5.accept(this, argu);
       return _ret;
    }
@@ -293,22 +453,33 @@ public class GJDepthFirst<R,A> implements GJVisitor<R,A> {
     * f3 -> Expression()
     * f4 -> ")"
     */
-   public R visit(DefineExpression n, A argu) {
-      R _ret=null;
+   public Returnable visit(DefineExpression n, Environment argu) {
+      Returnable _ret=null;
       n.f0.accept(this, argu);
       n.f1.accept(this, argu);
       n.f2.accept(this, argu);
-      n.f3.accept(this, argu);
+      _ret = n.f3.accept(this, argu);
+      if(_ret.type() == ReturnableType.ERR) {
+    	  return _ret;	// stop processing with err TODO check expression for possible err also
+      }
+      if(_ret.type() == ReturnableType.LAMBDA ) {
+    	  ((ProcedureReturnable)_ret).setName( n.f2.f0.tokenImage);
+      }
       n.f4.accept(this, argu);
-      return _ret;
+      argu.add(n.f2.f0.tokenImage, _ret);// adding variable to symbol table
+      return new NullReturnable() ; //  a/c to assignment
+//      return _ret;
    }
 
    /**
     * f0 -> <IDENTIFIER>
     */
-   public R visit(Identifier n, A argu) {
-      R _ret=null;
+   public Returnable visit(Identifier n, Environment argu) {
+      Returnable _ret = argu.get(n.f0.tokenImage);
       n.f0.accept(this, argu);
+      if(_ret == null) {
+    	  return new ErrReturnable("Symbol '" + n.f0.tokenImage +"' not found in the environment.");
+      }
       return _ret;
    }
 
@@ -319,13 +490,20 @@ public class GJDepthFirst<R,A> implements GJVisitor<R,A> {
     * f3 -> Expression()
     * f4 -> ")"
     */
-   public R visit(Assignment n, A argu) {
-      R _ret=null;
+   public Returnable visit(Assignment n, Environment argu) {
+      Returnable _ret=null;
       n.f0.accept(this, argu);
       n.f1.accept(this, argu);
-      n.f2.accept(this, argu);
-      n.f3.accept(this, argu);
+      Returnable id_info = n.f2.accept(this, argu);
+      if(id_info.type() == ReturnableType.ERR) {
+    	  return id_info;	// stop processing with err TODO check expression for possible err also
+      }
+      _ret = n.f3.accept(this, argu);
+      if(_ret.type() == ReturnableType.ERR )
+    	  return _ret;
+      
       n.f4.accept(this, argu);
+      argu.update(n.f2.f0.tokenImage, _ret);//TODO check for undefined
       return _ret;
    }
 
@@ -338,15 +516,25 @@ public class GJDepthFirst<R,A> implements GJVisitor<R,A> {
     * f5 -> Expression()
     * f6 -> ")"
     */
-   public R visit(ProcedureExp n, A argu) {
-      R _ret=null;
+   public Returnable visit(ProcedureExp n, Environment argu) {
+      Returnable _ret=null;
       n.f0.accept(this, argu);
       n.f1.accept(this, argu);
       n.f2.accept(this, argu);
-      n.f3.accept(this, argu);
+      ProcedureReturnable procedureDefinition = new ProcedureReturnable(argu);
+      procedureDefinition.arguments = new String[n.f3.nodes.size()];
+      for(int i = 0 ; i < n.f3.nodes.size() ; i++) {
+    	  Node node = n.f3.nodes.get(i);
+    	  procedureDefinition.addArgument( ((Identifier)node).f0.tokenImage, i);
+//    	  Returnable result = node.accept(this, argu);
+//    	  System.out.format(result.print());
+      }
+//      n.f3.accept(this, argu);
       n.f4.accept(this, argu);
-      n.f5.accept(this, argu);
+      procedureDefinition.body = n.f5;
+//      n.f5.accept(this, argu);
       n.f6.accept(this, argu);
+      _ret = procedureDefinition; // TODO check this , only returning node
       return _ret;
    }
 
@@ -356,11 +544,44 @@ public class GJDepthFirst<R,A> implements GJVisitor<R,A> {
     * f2 -> ( Expression() )*
     * f3 -> ")"
     */
-   public R visit(Application n, A argu) {
-      R _ret=null;
+   public Returnable visit(Application n, Environment argu) {
+      Returnable _ret=null;
       n.f0.accept(this, argu);
-      n.f1.accept(this, argu);
-      n.f2.accept(this, argu);
+      Returnable result = n.f1.accept(this, argu);
+      if(result.type() != ReturnableType.LAMBDA ) {
+//    	  if( n.f1.f0.which == 3)
+//    		  return new ErrReturnable("Symbol/lambda " + ((Identifier)n.f1.f0.choice).f0.tokenImage +" not found in the environment.");
+    	  if(result.type() == ReturnableType.ERR) return result;
+    	  return new ErrReturnable("expected function, given: "+ result.print() ); // TODO change this msg
+      }
+      
+      int arg_len = n.f2.nodes.size();
+      
+      ProcedureReturnable procedure_definition =  (ProcedureReturnable)result;
+      
+      if(arg_len < procedure_definition.arguments.length) {
+    	  String procedureName = procedure_definition.name;
+    	  if(procedureName.length() > 1)
+    		  procedureName = " '"+procedureName+"'";
+    	  return new ErrReturnable("Number of supplied arguments to procedure"+ procedureName +" is less than expected.");
+      }else if(arg_len > procedure_definition.arguments.length) {
+    	  String procedureName = procedure_definition.name;
+    	  if(procedureName.length() > 1)
+    		  procedureName = " '"+procedureName+"'";
+    	  return new ErrReturnable("Number of supplied arguments to procedure"+ procedureName +" is greater than expected.");
+      }
+      
+      // lexical scoping  
+      Environment scope = new Environment(procedure_definition.getScope());
+      //Tip: change scope to current environment to make it dynamic scoping
+      
+      for (int i = 0; i < procedure_definition.arguments.length; i++) { // binding formal to actual
+    	  Node node = n.f2.nodes.get(i);
+    	  scope.add(procedure_definition.arguments[i], node.accept(this, argu));
+      }
+//      n.f2.accept(this, argu);
+      
+      _ret = procedure_definition.body.accept(this,scope); // calling function
       n.f3.accept(this, argu);
       return _ret;
    }

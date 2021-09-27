@@ -1,0 +1,58 @@
+(define a 10)
+(if (< 5 10)
+(set! a 15)
+(+ a 20))
+a
+	
+	(* (- 4 7) (/ 8 5) )
+	2
+	#t
+	(define foo (lambda (x) 
+    			 (lambda (y) 
+    			         (= x y))))
+    (define proc (foo 1))
+	(define h (lambda (x y)
+				(x y)) )
+	(proc 0 )
+	(h proc )
+	( (foo 1) h 3)
+	(proc 5 6)
+	(proc 1)	
+(set! b 10)
+
+(define a 10)
+a
+(define z (lambda (x y) (+ x y)))
+
+(z z 2)
+
+(begin  (+ b 10) (+ a 10) )
+
+(define foo (lambda (x) 
+    			 (lambda (y) 
+    			         (+ x y))))
+    (define square (lambda (x) (* x x)))
+    ((foo (square 5)) (square 5))
+
+(+ #t #f)
+
+
+(define b 30)
+(define func (lambda (x)
+               (begin (define b 10)
+                      (set! x 5)
+                       (+ b x)
+                       b
+                       )))
+(func 5)
+b 
+
+/*(define b 30)
+(define func (lambda (x)
+               (begin (set! b 10)
+                      (set! x 5)
+                       (+ b x)
+                       b
+                       )))
+(func 5)
+b */
